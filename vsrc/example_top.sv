@@ -143,10 +143,10 @@ module example_top ();
        .reset              (~s_axi_aresetn),
        // TX packets
        .net_tx_tvalid      (/* m_axis_tvalid */),
-       .net_tx_tready      (/* m_axis_tready */),
        .net_tx_tdata       (/* m_axis_tdata  */),
        .net_tx_tkeep       (/* m_axis_tkeep  */),
        .net_tx_tlast       (/* m_axis_tlast  */),
+       .net_tx_tready      (m_axis_tready),
        // RX packets
        .net_rx_tvalid      (s_axis_tvalid),
        .net_rx_tready      (s_axis_tready),
