@@ -8,6 +8,8 @@ A simple Vivado project to test SDNet.
 ```
 $ cd scripts/
 $ vivado -mode batch -source build_proj.tcl
+$ sudo bash
+# ./setup_tap_interfaces.sh
 ```
 
 # Run Simulation
