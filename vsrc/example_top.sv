@@ -60,6 +60,13 @@ module example_top ();
    logic                            m_axis_tlast;
    logic [USER_META_DATA_WIDTH-1:0] m_axis_tuser;
    logic                            m_axis_tfirst;
+
+   // AXI Slave port
+   logic                  [63:0]    s_axis_net_tdata;
+   logic                   [7:0]    s_axis_net_tkeep;
+   logic                            s_axis_net_tvalid;
+   logic                            s_axis_net_tlast;
+   logic                            s_axis_net_tready;
    
    // AXI4-lite interface
    logic [S_AXI_ADDR_WIDTH-1:0]   s_axil_awaddr;
@@ -131,6 +138,7 @@ module example_top ();
    // --------------------------------------------------------------------------
    // Instantiate control stimulus block 
 
+   /* Not needed for this P4 program */
 
    // --------------------------------------------------------------------------
    // Instantiate data stimulus block
@@ -141,19 +149,59 @@ module example_top ();
        // Clock & Reset
        .clock              (s_axis_aclk),
        .reset              (~s_axi_aresetn),
-       // TX packets
+       // TX packets - going to TAP interface
        .net_tx_tvalid      (/* m_axis_tvalid */),
        .net_tx_tdata       (/* m_axis_tdata  */),
        .net_tx_tkeep       (/* m_axis_tkeep  */),
        .net_tx_tlast       (/* m_axis_tlast  */),
        .net_tx_tready      (m_axis_tready),
-       // RX packets
-       .net_rx_tvalid      (s_axis_tvalid),
-       .net_rx_tready      (s_axis_tready),
-       .net_rx_tdata       (s_axis_tdata),
-       .net_rx_tkeep       (s_axis_tkeep),
-       .net_rx_tlast       (s_axis_tlast)
+       // RX packets - coming from TAP interface
+       .net_rx_tvalid      (s_axis_net_tvalid),
+       .net_rx_tready      (s_axis_net_tready),
+       .net_rx_tdata       (s_axis_net_tdata),
+       .net_rx_tkeep       (s_axis_net_tkeep),
+       .net_rx_tlast       (s_axis_net_tlast)
    );
+
+   generate
+   if (TDATA_NUM_BYTES == 64) begin: WIDE_DP
+
+   // Convert: 64-bit --> 512-bit
+   nf_axis_converter #(
+     .C_M_AXIS_DATA_WIDTH (TDATA_NUM_BYTES*8),
+     .C_S_AXIS_DATA_WIDTH (64),
+     .C_AXIS_TUSER_WIDTH (USER_META_DATA_WIDTH),
+     .C_DEFAULT_VALUE_ENABLE (0) // don't change tuser, just pass it along
+   ) rx_dwidth_converter_inst (
+     .axi_aclk        (s_axis_aclk),
+     .axi_resetn      (s_axi_aresetn),
+ 
+     .s_axis_tvalid   (s_axis_net_tvalid),  // input wire s_axis_tvalid
+     .s_axis_tready   (s_axis_net_tready),  // output wire s_axis_tready
+     .s_axis_tdata    (s_axis_net_tdata),    // input wire [63 : 0] s_axis_tdata
+     .s_axis_tkeep    (s_axis_net_tkeep),    // input wire [7 : 0] s_axis_tkeep
+     .s_axis_tuser    (0),    // input wire [127 : 0] s_axis_tuser
+     .s_axis_tlast    (s_axis_net_tlast),    // input wire s_axis_tlast
+ 
+     .m_axis_tvalid   (s_axis_tvalid),  // output wire m_axis_tvalid
+     .m_axis_tready   (s_axis_tready),  // input wire m_axis_tready
+     .m_axis_tdata    (s_axis_tdata),    // output wire [511 : 0] m_axis_tdata
+     .m_axis_tkeep    (s_axis_tkeep),    // output wire [63 : 0] m_axis_tkeep
+     .m_axis_tuser    (),    // output wire [127 : 0] m_axis_tuser
+     .m_axis_tlast    (s_axis_tlast)    // output wire m_axis_tlast
+   );
+
+   end
+   else if (TDATA_NUM_BYTES == 8) begin: NARROW_DP
+
+   assign s_axis_tvalid = s_axis_net_tvalid;
+   assign s_axis_tdata = s_axis_net_tdata;
+   assign s_axis_tkeep = s_axis_net_tkeep;
+   assign s_axis_tlast = s_axis_net_tlast;
+   assign s_axis_net_tready = s_axis_tready;
+
+   end
+   endgenerate
 
    /*--------------------------------------*/
    /* State machine to drive s_axis_tfirst */
