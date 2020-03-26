@@ -13,6 +13,17 @@ set proj_dir [get_property DIRECTORY [current_project]]
 # Build SDNet IP
 source build_sdnet.tcl
 
+# Build AXI-Stream width converter (512-bit --> 64-bit)
+set tx_dwidth_converter axis_tx_dwidth_converter
+create_ip -name axis_dwidth_converter -vendor xilinx.com -library ip -version 1.1 -module_name $tx_dwidth_converter
+set_property -dict {
+    CONFIG.S_TDATA_NUM_BYTES {64}
+    CONFIG.M_TDATA_NUM_BYTES {8}
+    CONFIG.HAS_TLAST {1}
+    CONFIG.HAS_TKEEP {1}
+} [get_ips $tx_dwidth_converter]
+generate_target all [get_ips $tx_dwidth_converter]
+
 # Add simulation files
 set_property SOURCE_SET sources_1 [get_filesets sim_1]
 add_files -norecurse -quiet -fileset sim_1 [glob -nocomplain -directory ${root_dir}/vsrc "*.v"]

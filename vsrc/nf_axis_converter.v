@@ -459,46 +459,46 @@ module nf_axis_converter
 
         if(~in_fifo_empty) begin
             if(first_time) begin
-                    if(~info_fifo_empty) begin
-                        m_axis_tvalid = 1'b1;
-                        if(m_axis_tready) begin
-                            info_fifo_rd_en = 1'b1;
-                            first_time_next = 1'b0;
-                            counter_next = counter_plus_1;
-                        end
-                    end
-                end
-                else begin
+                if(~info_fifo_empty) begin
                     m_axis_tvalid = 1'b1;
-                    if(s_axis_tlast_fifo) begin // Last SLAVE word
-                       if(counter == S_M_RATIO_COUNT - 1) begin
-                           m_axis_tlast = 1'b1;
-                       end
-                       else if(~|next_tkeep) begin
-                           m_axis_tlast = 1'b1;
-                       end
-                    end
-                
                     if(m_axis_tready) begin
-                          counter_next = counter_plus_1;
-                          if(counter == S_M_RATIO_COUNT - 1) begin
-                              in_fifo_rd_en = 1'b1;
-                              counter_next = 0;
-                              if(s_axis_tlast_fifo) begin
-                                  first_time_next = 1'b1;
-                              end
-                      end
-                          else if(s_axis_tlast_fifo) begin // Last SLAVE word
-                              if(~|next_tkeep) begin
-                              // Next MASTER strobe is empty == This master word is the last
-                              // Clean up the current word
-                                  counter_next = 0;
-                                  first_time_next = 1'b1;
-                              in_fifo_rd_en = 1'b1;
-                              end
+                        info_fifo_rd_en = 1'b1;
+                        first_time_next = 1'b0;
+                        counter_next = counter_plus_1;
+                    end
+                end
+            end
+            else begin
+                m_axis_tvalid = 1'b1;
+                if(s_axis_tlast_fifo) begin // Last SLAVE word
+                   if(counter == S_M_RATIO_COUNT - 1) begin
+                       m_axis_tlast = 1'b1;
+                   end
+                   else if(~|next_tkeep) begin
+                       m_axis_tlast = 1'b1;
+                   end
+                end
+            
+                if(m_axis_tready) begin
+                    counter_next = counter_plus_1;
+                    if(counter == S_M_RATIO_COUNT - 1) begin
+                        in_fifo_rd_en = 1'b1;
+                        counter_next = 0;
+                        if(s_axis_tlast_fifo) begin
+                            first_time_next = 1'b1;
+                        end
+                    end
+                    else if(s_axis_tlast_fifo) begin // Last SLAVE word
+                        if(~|next_tkeep) begin
+                            // Next MASTER strobe is empty == This master word is the last
+                            // Clean up the current word
+                            counter_next = 0;
+                            first_time_next = 1'b1;
+                            in_fifo_rd_en = 1'b1;
                         end
                     end
                 end
+            end
         end
     end
 

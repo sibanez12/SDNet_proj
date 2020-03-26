@@ -1,5 +1,5 @@
 
-set datapath_bytes 8
+set datapath_bytes 64
 
 set proj_name [current_project]
 set proj_dir [get_property DIRECTORY [current_project]]

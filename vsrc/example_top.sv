@@ -61,12 +61,17 @@ module example_top ();
    logic [USER_META_DATA_WIDTH-1:0] m_axis_tuser;
    logic                            m_axis_tfirst;
 
-   // AXI Slave port
    logic                  [63:0]    s_axis_net_tdata;
    logic                   [7:0]    s_axis_net_tkeep;
    logic                            s_axis_net_tvalid;
    logic                            s_axis_net_tlast;
    logic                            s_axis_net_tready;
+
+   logic                  [63:0]    m_axis_net_tdata;
+   logic                   [7:0]    m_axis_net_tkeep;
+   logic                            m_axis_net_tvalid;
+   logic                            m_axis_net_tlast;
+   logic                            m_axis_net_tready;
    
    // AXI4-lite interface
    logic [S_AXI_ADDR_WIDTH-1:0]   s_axil_awaddr;
@@ -150,11 +155,11 @@ module example_top ();
        .clock              (s_axis_aclk),
        .reset              (~s_axi_aresetn),
        // TX packets - going to TAP interface
-       .net_tx_tvalid      (/* m_axis_tvalid */),
-       .net_tx_tdata       (/* m_axis_tdata  */),
-       .net_tx_tkeep       (/* m_axis_tkeep  */),
-       .net_tx_tlast       (/* m_axis_tlast  */),
-       .net_tx_tready      (m_axis_tready),
+       .net_tx_tvalid      (m_axis_net_tvalid),
+       .net_tx_tdata       (m_axis_net_tdata),
+       .net_tx_tkeep       (m_axis_net_tkeep),
+       .net_tx_tlast       (m_axis_net_tlast),
+       .net_tx_tready      (m_axis_net_tready),
        // RX packets - coming from TAP interface
        .net_rx_tvalid      (s_axis_net_tvalid),
        .net_rx_tready      (s_axis_net_tready),
@@ -191,6 +196,24 @@ module example_top ();
      .m_axis_tlast    (s_axis_tlast)    // output wire m_axis_tlast
    );
 
+   // Convert: 512-bit --> 64-bit
+   axis_tx_dwidth_converter tx_dwidth_converter_inst (
+     .aclk            (s_axis_aclk),                    // input wire aclk
+     .aresetn         (s_axi_aresetn),              // input wire aresetn
+
+     .s_axis_tvalid   (m_axis_tvalid),  // input wire s_axis_tvalid
+     .s_axis_tready   (m_axis_tready),  // output wire s_axis_tready
+     .s_axis_tdata    (m_axis_tdata),    // input wire [511 : 0] s_axis_tdata
+     .s_axis_tkeep    (m_axis_tkeep),    // input wire [63 : 0] s_axis_tkeep
+     .s_axis_tlast    (m_axis_tlast),    // input wire s_axis_tlast
+
+     .m_axis_tvalid   (m_axis_net_tvalid),  // output wire m_axis_tvalid
+     .m_axis_tready   (m_axis_net_tready),  // input wire m_axis_tready
+     .m_axis_tdata    (m_axis_net_tdata),    // output wire [63 : 0] m_axis_tdata
+     .m_axis_tkeep    (m_axis_net_tkeep),    // output wire [7 : 0] m_axis_tkeep
+     .m_axis_tlast    (m_axis_net_tlast)    // output wire m_axis_tlast
+   );
+
    end
    else if (TDATA_NUM_BYTES == 8) begin: NARROW_DP
 
@@ -199,6 +222,12 @@ module example_top ();
    assign s_axis_tkeep = s_axis_net_tkeep;
    assign s_axis_tlast = s_axis_net_tlast;
    assign s_axis_net_tready = s_axis_tready;
+
+   assign m_axis_net_tvalid = m_axis_tvalid;
+   assign m_axis_net_tdata = m_axis_tdata;
+   assign m_axis_net_tkeep = m_axis_tkeep;
+   assign m_axis_net_tlast = m_axis_tlast;
+   assign m_axis_tready = m_axis_net_tready;
 
    end
    endgenerate
@@ -214,7 +243,7 @@ module example_top ();
    always @(*) begin
      state_next = state;
      s_axis_tfirst = 0;
-     s_axis_tuser = 0;
+     s_axis_tuser = {1'b1, {(USER_META_DATA_WIDTH-1){1'b0}}};
 
      case (state)
        START: begin

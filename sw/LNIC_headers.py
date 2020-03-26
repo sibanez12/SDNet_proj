@@ -20,9 +20,15 @@ class LNIC(Packet):
             l = len(pay)
             p = p[:6]+struct.pack("!H", l)+p[8:]
         return p+pay
-    def mysummary(self):
-        return self.sprintf("src=%src% dst=%dst% msg_id=%msg_id% msg_len=%msg_len% offset=%offset%")
-    
+
+
+class App(Packet):
+    name = "App"
+    fields_desc = [
+        IPField("ipv4_addr", "0.0.0.0"),
+        ShortField("lnic_addr", 0),
+        ShortField("msg_len", 0)
+    ]    
 
 bind_layers(IP, LNIC, proto=LNIC_PROTO)
 
