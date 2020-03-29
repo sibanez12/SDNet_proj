@@ -51,7 +51,7 @@ const bit<1> CPU_ID = 1;
 // IO metadata structure
 struct nf_metadata {
     /* Inputs */
-    bit<1> ingress_id;
+    bit<1> ingress_id; // 0 = network, 1 = CPU
     // metadata for pkts from CPU only (set by pktization buffer)
     bit<16> msg_id;
     bit<16> offset;
