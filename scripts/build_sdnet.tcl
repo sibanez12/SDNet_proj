@@ -1,5 +1,5 @@
 
-set datapath_bytes 64
+set tdata_bytes 8
 
 set proj_name [current_project]
 set proj_dir [get_property DIRECTORY [current_project]]
@@ -19,7 +19,7 @@ if {![string equal [get_ips $sdnet] ""]} {
 # Generate a new sdnet_0 IP
 create_ip -name sdnet -vendor xilinx.com -library ip -version 2.1 -module_name $sdnet
 set_property -dict [subst {
-    CONFIG.TDATA_NUM_BYTES {${datapath_bytes}}
+    CONFIG.TDATA_NUM_BYTES {${tdata_bytes}}
     CONFIG.P4_FILE {${p4_file}}
     CONFIG.DEBUG_IO_CAPTURE_ENABLE {true}
     CONFIG.CAM_DEBUG_HW_LOOKUP {true}
