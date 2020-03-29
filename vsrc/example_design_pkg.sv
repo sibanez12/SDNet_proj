@@ -35,6 +35,7 @@ package example_design_pkg;
    
    export sdnet_0_pkg::TDATA_NUM_BYTES;
    export sdnet_0_pkg::USER_META_DATA_WIDTH;
+   export sdnet_0_pkg::USER_META_DATA_T;
    export sdnet_0_pkg::S_AXI_DATA_WIDTH;
    export sdnet_0_pkg::S_AXI_ADDR_WIDTH;
    export sdnet_0_pkg::AXIS_CLK_FREQ_MHZ;

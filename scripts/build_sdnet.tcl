@@ -4,7 +4,9 @@ set datapath_bytes 64
 set proj_name [current_project]
 set proj_dir [get_property DIRECTORY [current_project]]
 
-set p4_file ${proj_dir}/../p4src/lnic_v1.p4
+source ${proj_dir}/../scripts/common.tcl
+
+set p4_file ${proj_dir}/../p4src/${p4_proj}/${p4_proj}.p4
 set sdnet sdnet_0
 
 # Delete the sdnet IP if it already exists

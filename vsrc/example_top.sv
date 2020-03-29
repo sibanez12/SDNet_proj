@@ -43,248 +43,203 @@ module example_top ();
    logic m_axi_hbm_aclk      = 1'b0;
    logic m_axi_hbm_aresetn   = 1'b0;
    
+   // Metadata
+   USER_META_DATA_T user_metadata_in;
+   logic            user_metadata_in_valid;
+   USER_META_DATA_T user_metadata_out;
+   logic            user_metadata_out_valid;
+   
    // AXI Slave port
-   logic [TDATA_NUM_BYTES*8-1:0]    s_axis_tdata;
-   logic [TDATA_NUM_BYTES-1:0]      s_axis_tkeep;
-   logic                            s_axis_tvalid;
-   logic                            s_axis_tlast;
-   logic                            s_axis_tready;
-   logic [USER_META_DATA_WIDTH-1:0] s_axis_tuser;
-   logic                            s_axis_tfirst;
+   logic [TDATA_NUM_BYTES*8-1:0] s_axis_tdata;
+   logic [TDATA_NUM_BYTES-1:0]   s_axis_tkeep;
+   logic                         s_axis_tvalid;
+   logic                         s_axis_tlast;
+   logic                         s_axis_tready;
 
    // AXI Master port
-   logic [TDATA_NUM_BYTES*8-1:0]    m_axis_tdata;
-   logic [TDATA_NUM_BYTES-1:0]      m_axis_tkeep;
-   logic                            m_axis_tvalid;
-   logic                            m_axis_tready;
-   logic                            m_axis_tlast;
-   logic [USER_META_DATA_WIDTH-1:0] m_axis_tuser;
-   logic                            m_axis_tfirst;
-
-   logic                  [63:0]    s_axis_net_tdata;
-   logic                   [7:0]    s_axis_net_tkeep;
-   logic                            s_axis_net_tvalid;
-   logic                            s_axis_net_tlast;
-   logic                            s_axis_net_tready;
-
-   logic                  [63:0]    m_axis_net_tdata;
-   logic                   [7:0]    m_axis_net_tkeep;
-   logic                            m_axis_net_tvalid;
-   logic                            m_axis_net_tlast;
-   logic                            m_axis_net_tready;
+   logic [TDATA_NUM_BYTES*8-1:0] m_axis_tdata;
+   logic [TDATA_NUM_BYTES-1:0]   m_axis_tkeep;
+   logic                         m_axis_tvalid;
+   logic                         m_axis_tready;
+   logic                         m_axis_tlast;
    
    // AXI4-lite interface
-   logic [S_AXI_ADDR_WIDTH-1:0]   s_axil_awaddr;
-   logic                          s_axil_awvalid;
-   logic                          s_axil_awready;
-   logic [S_AXI_DATA_WIDTH-1:0]   s_axil_wdata;
-   logic [S_AXI_DATA_WIDTH/8-1:0] s_axil_wstrb;
-   logic                          s_axil_wvalid;
-   logic                          s_axil_wready;
-   logic [1:0]                    s_axil_bresp;
-   logic                          s_axil_bvalid;
-   logic                          s_axil_bready;
-   logic [S_AXI_ADDR_WIDTH-1:0]   s_axil_araddr;
-   logic                          s_axil_arvalid;
-   logic                          s_axil_arready;
-   logic [S_AXI_DATA_WIDTH-1:0]   s_axil_rdata;
-   logic                          s_axil_rvalid;
-   logic                          s_axil_rready;
-   logic [1:0]                    s_axil_rresp;
+   logic [S_AXI_ADDR_WIDTH-1:0]   s_axi_awaddr;
+   logic                          s_axi_awvalid;
+   logic                          s_axi_awready;
+   logic [S_AXI_DATA_WIDTH-1:0]   s_axi_wdata;
+   logic [S_AXI_DATA_WIDTH/8-1:0] s_axi_wstrb;
+   logic                          s_axi_wvalid;
+   logic                          s_axi_wready;
+   logic [1:0]                    s_axi_bresp;
+   logic                          s_axi_bvalid;
+   logic                          s_axi_bready;
+   logic [S_AXI_ADDR_WIDTH-1:0]   s_axi_araddr;
+   logic                          s_axi_arvalid;
+   logic                          s_axi_arready;
+   logic [S_AXI_DATA_WIDTH-1:0]   s_axi_rdata;
+   logic                          s_axi_rvalid;
+   logic                          s_axi_rready;
+   logic [1:0]                    s_axi_rresp;
    
+
+
+   // Sequencing
+   logic  apb_complete;
+   logic  traffic_start;
+   logic  stimulus_done;
+   logic  checker_done;
+   int    meta_mismatch_count;
+   int    pkt_mismatch_count;
+   int    stimulus_pkt_count;
+   int    checker_pkt_count;
+   string traffic_filename;
 
    // --------------------------------------------------------------------------
    // Instantiate DUT
-   // SDNet wrapper module
-   sdnet_wrapper
-   #(
-     .TDATA_W (TDATA_NUM_BYTES*8),
-     .TUSER_W (USER_META_DATA_WIDTH)
-   ) sdnet_wrapper_inst (
+   
+   sdnet_0 DUT (
       // Clocks & Resets
-      .axis_aclk               (s_axis_aclk),
-      .axil_aclk               (s_axi_aclk),
-      .axi_aresetn             (s_axi_aresetn),
-      // AXI4 Stream Slave port
-      .s_axis_tready           (s_axis_tready),
+      .s_axis_aclk             (s_axis_aclk),
+      .s_axis_aresetn          (s_axis_aresetn),
+      .cam_mem_aclk            (cam_mem_aclk),
+      .cam_mem_aresetn         (cam_mem_aresetn),
+      .s_axi_aclk              (s_axi_aclk),
+      .s_axi_aresetn           (s_axi_aresetn),
+      .m_axi_hbm_aclk          (m_axi_hbm_aclk),
+      .m_axi_hbm_aresetn       (m_axi_hbm_aresetn),
+      // Metadata
+      .user_metadata_in        (user_metadata_in),
+      .user_metadata_in_valid  (user_metadata_in_valid),
+      .user_metadata_out       (user_metadata_out),
+      .user_metadata_out_valid (user_metadata_out_valid),
+      // AXI Slave port
       .s_axis_tdata            (s_axis_tdata),
       .s_axis_tkeep            (s_axis_tkeep),
       .s_axis_tvalid           (s_axis_tvalid),
       .s_axis_tlast            (s_axis_tlast),
-      .s_axis_tfirst           (s_axis_tfirst),
-      .s_axis_tuser            (s_axis_tuser),
-      // AXI4 Stream Master port
+      .s_axis_tready           (s_axis_tready),
+      // AXI Master port
       .m_axis_tdata            (m_axis_tdata),
       .m_axis_tkeep            (m_axis_tkeep),
       .m_axis_tvalid           (m_axis_tvalid),
       .m_axis_tready           (m_axis_tready),
       .m_axis_tlast            (m_axis_tlast),
-      .m_axis_tfirst           (m_axis_tfirst),
-      .m_axis_tuser            (m_axis_tuser),
        // Slave AXI-lite interface
-      .s_axil_awaddr            (s_axil_awaddr),
-      .s_axil_awvalid           (s_axil_awvalid),
-      .s_axil_awready           (s_axil_awready),
-      .s_axil_wdata             (s_axil_wdata),
-      .s_axil_wvalid            (s_axil_wvalid),
-      .s_axil_wready            (s_axil_wready),
-      .s_axil_bresp             (s_axil_bresp),
-      .s_axil_bvalid            (s_axil_bvalid),
-      .s_axil_bready            (s_axil_bready),
-      .s_axil_araddr            (s_axil_araddr),
-      .s_axil_arvalid           (s_axil_arvalid),
-      .s_axil_arready           (s_axil_arready),
-      .s_axil_rdata             (s_axil_rdata),
-      .s_axil_rvalid            (s_axil_rvalid),
-      .s_axil_rready            (s_axil_rready),
-      .s_axil_rresp             (s_axil_rresp)
+      .s_axi_awaddr            (s_axi_awaddr),
+      .s_axi_awvalid           (s_axi_awvalid),
+      .s_axi_awready           (s_axi_awready),
+      .s_axi_wdata             (s_axi_wdata),
+      .s_axi_wstrb             (s_axi_wstrb),
+      .s_axi_wvalid            (s_axi_wvalid),
+      .s_axi_wready            (s_axi_wready),
+      .s_axi_bresp             (s_axi_bresp),
+      .s_axi_bvalid            (s_axi_bvalid),
+      .s_axi_bready            (s_axi_bready),
+      .s_axi_araddr            (s_axi_araddr),
+      .s_axi_arvalid           (s_axi_arvalid),
+      .s_axi_arready           (s_axi_arready),
+      .s_axi_rdata             (s_axi_rdata),
+      .s_axi_rvalid            (s_axi_rvalid),
+      .s_axi_rready            (s_axi_rready),
+      .s_axi_rresp             (s_axi_rresp)
    );
    
    // --------------------------------------------------------------------------
    // Instantiate control stimulus block 
 
-   /* Not needed for this P4 program */
+   example_control #(
+      .AXI_ADDR_WIDTH      (S_AXI_ADDR_WIDTH),
+      .AXI_DATA_WIDTH      (S_AXI_DATA_WIDTH)
+   ) example_control (
+      // Clock & Reset
+      .axi_aclk            (s_axi_aclk),
+      .axi_aresetn         (s_axi_aresetn & apb_complete),
+      // AXI4-lite interface
+      .m_axi_awaddr        (s_axi_awaddr),
+      .m_axi_awvalid       (s_axi_awvalid),
+      .m_axi_awready       (s_axi_awready),
+      .m_axi_wdata         (s_axi_wdata),
+      .m_axi_wstrb         (s_axi_wstrb),
+      .m_axi_wvalid        (s_axi_wvalid),
+      .m_axi_wready        (s_axi_wready),
+      .m_axi_bresp         (s_axi_bresp),
+      .m_axi_bvalid        (s_axi_bvalid),
+      .m_axi_bready        (s_axi_bready),
+      .m_axi_araddr        (s_axi_araddr),
+      .m_axi_arvalid       (s_axi_arvalid),
+      .m_axi_arready       (s_axi_arready),
+      .m_axi_rdata         (s_axi_rdata),
+      .m_axi_rvalid        (s_axi_rvalid),
+      .m_axi_rready        (s_axi_rready),
+      .m_axi_rresp         (s_axi_rresp),     
+      // Sequencing    
+      .stimulus_done       (stimulus_done),
+      .checker_done        (checker_done),
+      .meta_mismatch_count (meta_mismatch_count),
+      .pkt_mismatch_count  (pkt_mismatch_count),
+      .stimulus_pkt_count  (stimulus_pkt_count),
+      .checker_pkt_count   (checker_pkt_count),
+      .traffic_start       (traffic_start),
+      .traffic_filename    (traffic_filename)
+   );
 
    // --------------------------------------------------------------------------
    // Instantiate data stimulus block
-
-   sim_network #(
-       .DEVNAME ("tap0")
-   ) sim_network_0 (
-       // Clock & Reset
-       .clock              (s_axis_aclk),
-       .reset              (~s_axi_aresetn),
-       // TX packets - going to TAP interface
-       .net_tx_tvalid      (m_axis_net_tvalid),
-       .net_tx_tdata       (m_axis_net_tdata),
-       .net_tx_tkeep       (m_axis_net_tkeep),
-       .net_tx_tlast       (m_axis_net_tlast),
-       .net_tx_tready      (m_axis_net_tready),
-       // RX packets - coming from TAP interface
-       .net_rx_tvalid      (s_axis_net_tvalid),
-       .net_rx_tready      (s_axis_net_tready),
-       .net_rx_tdata       (s_axis_net_tdata),
-       .net_rx_tkeep       (s_axis_net_tkeep),
-       .net_rx_tlast       (s_axis_net_tlast)
+   
+   example_stimulus #(
+      .TDATA_NUM_BYTES      (TDATA_NUM_BYTES),
+      .USER_META_DATA_WIDTH (USER_META_DATA_WIDTH)
+   ) example_stimulus (
+      // Clocks & Resets
+      .axis_aclk            (s_axis_aclk),
+      .axis_aresetn         (s_axis_aresetn),
+      // Meta Data
+      .user_metadata_valid  (user_metadata_in_valid),
+      .user_metadata        (user_metadata_in),
+      // Packet Data
+      .m_axis_tready        (s_axis_tready),
+      .m_axis_tvalid        (s_axis_tvalid),
+      .m_axis_tlast         (s_axis_tlast),
+      .m_axis_tkeep         (s_axis_tkeep),
+      .m_axis_tdata         (s_axis_tdata),
+      // Sequencing   
+      .traffic_start        (traffic_start),
+      .traffic_filename     (traffic_filename),
+      .packets_sent         (stimulus_pkt_count),
+      .stimulus_done        (stimulus_done)
    );
 
-   generate
-   if (TDATA_NUM_BYTES > 8) begin: WIDE_DP
+   // --------------------------------------------------------------------------
+   // Instantiate checker block
 
-   // Convert: 64-bit --> 512-bit
-   nf_axis_converter #(
-     .C_M_AXIS_DATA_WIDTH (TDATA_NUM_BYTES*8),
-     .C_S_AXIS_DATA_WIDTH (64),
-     .C_AXIS_TUSER_WIDTH (USER_META_DATA_WIDTH),
-     .C_DEFAULT_VALUE_ENABLE (0) // don't change tuser, just pass it along
-   ) rx_dwidth_converter_inst (
-     .axi_aclk        (s_axis_aclk),
-     .axi_resetn      (s_axi_aresetn),
- 
-     .s_axis_tvalid   (s_axis_net_tvalid),  // input wire s_axis_tvalid
-     .s_axis_tready   (s_axis_net_tready),  // output wire s_axis_tready
-     .s_axis_tdata    (s_axis_net_tdata),    // input wire [63 : 0] s_axis_tdata
-     .s_axis_tkeep    (s_axis_net_tkeep),    // input wire [7 : 0] s_axis_tkeep
-     .s_axis_tuser    (0),    // input wire [127 : 0] s_axis_tuser
-     .s_axis_tlast    (s_axis_net_tlast),    // input wire s_axis_tlast
- 
-     .m_axis_tvalid   (s_axis_tvalid),  // output wire m_axis_tvalid
-     .m_axis_tready   (s_axis_tready),  // input wire m_axis_tready
-     .m_axis_tdata    (s_axis_tdata),    // output wire [511 : 0] m_axis_tdata
-     .m_axis_tkeep    (s_axis_tkeep),    // output wire [63 : 0] m_axis_tkeep
-     .m_axis_tuser    (),    // output wire [127 : 0] m_axis_tuser
-     .m_axis_tlast    (s_axis_tlast)    // output wire m_axis_tlast
+   example_checker #(
+      .TDATA_NUM_BYTES      (TDATA_NUM_BYTES),
+      .USER_META_DATA_WIDTH (USER_META_DATA_WIDTH)
+   ) example_checker (
+      // Clocks & Resets
+      .axis_aclk            (s_axis_aclk),
+      .axis_aresetn         (s_axis_aresetn),
+      // Meta Data          
+      .user_metadata_valid  (user_metadata_out_valid),
+      .user_metadata        (user_metadata_out),
+      // Packet Data        
+      .s_axis_tready        (m_axis_tready),
+      .s_axis_tvalid        (m_axis_tvalid),
+      .s_axis_tlast         (m_axis_tlast),
+      .s_axis_tkeep         (m_axis_tkeep),
+      .s_axis_tdata         (m_axis_tdata),
+      // Sequencing   
+      .traffic_start        (traffic_start),
+      .traffic_filename     (traffic_filename),
+      .checker_done         (checker_done),
+      .packets_received     (checker_pkt_count),
+      .meta_mismatch_count  (meta_mismatch_count),
+      .pkt_mismatch_count   (pkt_mismatch_count)
    );
 
-   // Convert: 512-bit --> 64-bit
-   axis_tx_dwidth_converter tx_dwidth_converter_inst (
-     .aclk            (s_axis_aclk),                    // input wire aclk
-     .aresetn         (s_axi_aresetn),              // input wire aresetn
 
-     .s_axis_tvalid   (m_axis_tvalid),  // input wire s_axis_tvalid
-     .s_axis_tready   (m_axis_tready),  // output wire s_axis_tready
-     .s_axis_tdata    (m_axis_tdata),    // input wire [511 : 0] s_axis_tdata
-     .s_axis_tkeep    (m_axis_tkeep),    // input wire [63 : 0] s_axis_tkeep
-     .s_axis_tlast    (m_axis_tlast),    // input wire s_axis_tlast
-
-     .m_axis_tvalid   (m_axis_net_tvalid),  // output wire m_axis_tvalid
-     .m_axis_tready   (m_axis_net_tready),  // input wire m_axis_tready
-     .m_axis_tdata    (m_axis_net_tdata),    // output wire [63 : 0] m_axis_tdata
-     .m_axis_tkeep    (m_axis_net_tkeep),    // output wire [7 : 0] m_axis_tkeep
-     .m_axis_tlast    (m_axis_net_tlast)    // output wire m_axis_tlast
-   );
-
-   end
-   else if (TDATA_NUM_BYTES == 8) begin: NARROW_DP
-
-   assign s_axis_tvalid = s_axis_net_tvalid;
-   assign s_axis_tdata = s_axis_net_tdata;
-   assign s_axis_tkeep = s_axis_net_tkeep;
-   assign s_axis_tlast = s_axis_net_tlast;
-   assign s_axis_net_tready = s_axis_tready;
-
-   assign m_axis_net_tvalid = m_axis_tvalid;
-   assign m_axis_net_tdata = m_axis_tdata;
-   assign m_axis_net_tkeep = m_axis_tkeep;
-   assign m_axis_net_tlast = m_axis_tlast;
-   assign m_axis_tready = m_axis_net_tready;
-
-   end
-   endgenerate
-
-   /*--------------------------------------*/
-   /* State machine to drive s_axis_tfirst */
-   /*--------------------------------------*/
-   localparam START = 0;
-   localparam WAIT_EOP = 1;
-
-   reg state, state_next;
-
-   wire ingress_id = 1;
-   wire [15:0] msg_id = 16'hAB;
-   wire [15:0] offset = 16'hCD;
-   wire [15:0] lnic_src = 16'hEF;
-   wire egress_id = 0;
-   wire [15:0] lnic_dst = 0;
-   wire [15:0] msg_len = 0;
-
-   always @(*) begin
-     state_next = state;
-     s_axis_tfirst = 0;
-     s_axis_tuser = {ingress_id,
-                     msg_id,
-                     offset,
-                     lnic_src,
-                     egress_id,
-                     lnic_dst,
-                     msg_len};
-
-     case (state)
-       START: begin
-         if (s_axis_tvalid) begin
-           s_axis_tfirst = 1;
-         end
-         if (s_axis_tvalid & s_axis_tready & ~s_axis_tlast) begin
-           state_next = WAIT_EOP;
-         end
-       end
-
-       WAIT_EOP: begin
-         if (s_axis_tvalid & s_axis_tready & s_axis_tlast) begin
-           state_next = START;
-         end
-       end
-     endcase
-   end
-
-   always @(posedge s_axis_aclk) begin
-     if (~s_axi_aresetn) begin
-       state <= START;
-     end
-     else begin
-       state <= state_next;
-     end
-   end
+    assign apb_complete = s_axis_aresetn;
 
    // --------------------------------------------------------------------------
    // Generate clocks and resets

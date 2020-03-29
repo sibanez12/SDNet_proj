@@ -1,0 +1,5 @@
+% Packet 1
+nf_metadata.ingress_id=00 nf_metadata.msg_id=0000 nf_metadata.offset=0000 nf_metadata.lnic_src=0000 nf_metadata.egress_id=00 nf_metadata.lnic_dst=0000 nf_metadata.msg_len=0000 ;
+
+% Packet 2
+nf_metadata.ingress_id=01 nf_metadata.msg_id=0000 nf_metadata.offset=0000 nf_metadata.lnic_src=0000 nf_metadata.egress_id=00 nf_metadata.lnic_dst=0000 nf_metadata.msg_len=0000 ;
