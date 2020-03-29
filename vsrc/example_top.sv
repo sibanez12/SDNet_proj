@@ -169,7 +169,7 @@ module example_top ();
    );
 
    generate
-   if (TDATA_NUM_BYTES == 64) begin: WIDE_DP
+   if (TDATA_NUM_BYTES > 8) begin: WIDE_DP
 
    // Convert: 64-bit --> 512-bit
    nf_axis_converter #(
@@ -240,10 +240,24 @@ module example_top ();
 
    reg state, state_next;
 
+   wire ingress_id = 1;
+   wire [15:0] msg_id = 16'hAB;
+   wire [15:0] offset = 16'hCD;
+   wire [15:0] lnic_src = 16'hEF;
+   wire egress_id = 0;
+   wire [15:0] lnic_dst = 0;
+   wire [15:0] msg_len = 0;
+
    always @(*) begin
      state_next = state;
      s_axis_tfirst = 0;
-     s_axis_tuser = {1'b1, {(USER_META_DATA_WIDTH-1){1'b0}}};
+     s_axis_tuser = {ingress_id,
+                     msg_id,
+                     offset,
+                     lnic_src,
+                     egress_id,
+                     lnic_dst,
+                     msg_len};
 
      case (state)
        START: begin
