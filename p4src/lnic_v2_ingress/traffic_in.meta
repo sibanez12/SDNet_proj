@@ -1,0 +1,5 @@
+% Packet 1
+nf_metadata.src_ip=0 nf_metadata.lnic_src=0 nf_metadata.offset=0 nf_metadata.lnic_dst=0 nf_metadata.msg_len=0 ;
+
+% Packet 2
+nf_metadata.src_ip=0 nf_metadata.lnic_src=0 nf_metadata.offset=0 nf_metadata.lnic_dst=0 nf_metadata.msg_len=0 ;
