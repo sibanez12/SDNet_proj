@@ -1,0 +1,5 @@
+% Packet 1
+nf_metadata.dst_ip=0a010203 nf_metadata.lnic_dst=1234 nf_metadata.offset=0 nf_metadata.msg_len=10 nf_metadata.msg_id=0 nf_metadata.lnic_src=0 ;
+
+% Packet 2
+nf_metadata.dst_ip=0a010203 nf_metadata.lnic_dst=1234 nf_metadata.offset=0 nf_metadata.msg_len=10 nf_metadata.msg_id=0 nf_metadata.lnic_src=0 ;
